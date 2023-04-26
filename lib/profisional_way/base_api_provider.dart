@@ -5,13 +5,16 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:tips_code/profisional_way/base_api_exceptions.dart';
 import 'package:tips_code/profisional_way/base_response_model.dart';
+import 'package:tips_code/profisional_way/network_connection_checker.dart';
 
 enum ApiMethod { post, get, put, delete, patch }
 
 class ApiProvider {
   final http.Client client;
+  final NetworkInfoImpl networkInfo;
   ApiProvider(
     this.client,
+    this.networkInfo,
   );
   //
   static const int TIME_OUT_DURATION = 20;
@@ -27,7 +30,8 @@ class ApiProvider {
     final baseHeader = {
       'Accept': 'application/json',
       'lang': "en",
-      'Authorization': 'Bearer ${getIt<Session>().getToken()}', //?? get Token
+      'Authorization': 'Bearer "Token"}',
+      //?? Token from Shared Preferences or any local storage package...
     };
     //
     http.Response? response;
@@ -35,6 +39,7 @@ class ApiProvider {
     baseHeader.addAll(additionalHeader ?? {});
     try {
       //?? check internet connection
+
       if (!(await networkInfo.isConnected)) {
         throw ApiNotRespondingException('error_not_responsed');
       }
@@ -94,11 +99,12 @@ class ApiProvider {
     }
     //
     on SocketException {
-      throw ApiNotRespondingException('error_not_responsed');
+      throw ApiNotRespondingException('Check internet connection');
     }
     //
     on TimeoutException {
-      throw ApiNotRespondingException('error_not_responsed');
+      throw ApiNotRespondingException(
+          'Api not responded in time , Check connection quality');
     }
     //
     catch (e) {
@@ -117,14 +123,14 @@ class ApiProvider {
         return res;
       case 400:
       case 422:
-        throw InvalidInputException('error_input');
+        throw InvalidInputException('Inconsistency with the entered data');
       case 401:
       case 403:
-        throw UnauthorisedException('error_unauth');
+        throw UnauthorisedException('Session expired , please signin again');
       case 500:
-        throw FetchDataException('error_server');
+        throw FetchDataException('Error During Communication');
       default:
-        throw FetchDataException('error_server');
+        throw FetchDataException('Error During Communication');
     }
   }
 }
